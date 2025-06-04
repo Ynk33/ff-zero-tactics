@@ -1,26 +1,13 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 public class Highlightable : MonoBehaviour
 {
     [SerializeField]
-    private Renderer render;
-    
+    UnityEvent onHighlight;
+
     [SerializeField]
-    private Color highlightColor = Color.white;
-    
-    private Color initialColor;
-
-    void Start()
-    {
-        if (render == null)
-        {
-            // If no Renderer is found, log an error and return
-            Debug.LogError("No Renderer component found on the Tile GameObject or its children: " + gameObject.name);
-            return;
-        }
-
-        initialColor = render.material.GetColor("_BaseColor");
-    }
+    UnityEvent onResetColor;
 
     void Update()
     {
@@ -29,11 +16,11 @@ public class Highlightable : MonoBehaviour
 
     public void Highlight()
     {
-        render.material.SetColor("_BaseColor", highlightColor);
+        onHighlight?.Invoke();
     }
 
     public void ResetColor()
     {
-        render.material.SetColor("_BaseColor", initialColor);
+        onResetColor?.Invoke();
     }
 }
