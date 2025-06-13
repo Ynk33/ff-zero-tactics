@@ -2,12 +2,12 @@ using UnityEngine;
 
 public class GridObject : MonoBehaviour
 {
-    private GridObjectMap gridObjectMap;
+    GridManager gridManager;
 
     void Awake()
     {
-        gridObjectMap = FindAnyObjectByType<GridObjectMap>();
-        if (gridObjectMap == null)
+        gridManager = FindAnyObjectByType<GridManager>();
+        if (gridManager == null)
         {
             Debug.LogError("GridObjectMap not found in the scene. Please ensure a GridObjectMap component is present.");
         }
@@ -15,6 +15,6 @@ public class GridObject : MonoBehaviour
 
     void Start()
     {
-        gridObjectMap.Add(this);
+        gridManager.AddObject(this);
     }
 }
