@@ -29,7 +29,7 @@ public class AStar
 
         openSet.Enqueue(start, 0);
         gScore[start] = 0;
-        fScore[start] = Heuristic(start, end);
+        fScore[start] = gridManager.Heuristic(start, end);
 
         while (openSet.Count > 0)
         {
@@ -55,7 +55,7 @@ public class AStar
                 if (!gridManager.IsWalkable(neighbor) || gridManager.IsOccupied(neighbor))
                     continue;
 
-                float tentativeGScore = gScore[current] + 1;
+                float tentativeGScore = gScore[current] + gridManager.Heuristic(current, neighbor);
 
                 // If the tentative score exceeds the max distance, skip this neighbor because it is too far
                 if (tentativeGScore > maxDistance)
@@ -66,7 +66,7 @@ public class AStar
                 {
                     cameFrom[neighbor] = current;
                     gScore[neighbor] = tentativeGScore;
-                    fScore[neighbor] = tentativeGScore + Heuristic(neighbor, end);
+                    fScore[neighbor] = tentativeGScore + gridManager.Heuristic(neighbor, end);
                     if (!openSet.Elements.Any(x => x.Item1 == neighbor))
                         openSet.Enqueue(neighbor, fScore[neighbor]);
                 }
@@ -89,10 +89,5 @@ public class AStar
         }
 
         return neighbors;
-    }
-
-    float Heuristic(Vector3Int a, Vector3Int b)
-    {
-        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y) + Mathf.Abs(a.z - b.z);
     }
 }

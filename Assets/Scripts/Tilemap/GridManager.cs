@@ -179,7 +179,7 @@ public class GridManager : MonoBehaviour
         if (obj != null)
         {
             Deselect();
-            
+
             Selectable selectable = obj.GetComponent<Selectable>();
             if (selectable != null)
             {
@@ -210,7 +210,10 @@ public class GridManager : MonoBehaviour
 
     public void Deselect()
     {
-        selectedObject?.Deselect();
+        if (selectedObject != null)
+        {
+            selectedObject.Deselect();
+        }
         selectedObject = null;
     }
     #endregion
@@ -220,10 +223,19 @@ public class GridManager : MonoBehaviour
     {
         return aStar.FindPath(start, end, maxDistance);
     }
-    
+
     public List<Vector3Int> FindPath(Vector3 start, Vector3Int end, int maxDistance)
     {
         return aStar.FindPath(grid.WorldToCell(start), end, maxDistance);
+    }
+    
+    public float Heuristic(Vector3Int a, Vector3Int b)
+    {
+        // Increase cost if move is forward
+        float forwardCost = b.x - a.x;
+        if (forwardCost > 0) forwardCost *= 2;
+
+        return Mathf.Abs(forwardCost) + Mathf.Abs(a.y - b.y) + Mathf.Abs(a.z - b.z);
     }
     #endregion
 

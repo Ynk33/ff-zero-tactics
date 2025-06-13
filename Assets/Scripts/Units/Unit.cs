@@ -53,6 +53,10 @@ public class Unit : MonoBehaviour
                 callback.Invoke();
             });
         }
+        else
+        {
+            callback.Invoke(); // Call the callback even if no path is found
+        }
     }
 
     void ShowPath()
