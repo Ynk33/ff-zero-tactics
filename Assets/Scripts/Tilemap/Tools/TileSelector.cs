@@ -31,6 +31,7 @@ public class TileSelector : MonoBehaviour
         Vector3 mouseWorldPosition = GetMouseWorldPosition();
         if (mouseWorldPosition == ERROR_CELL)
         {
+            gridManager.HideAllHighlights();
             return;
         }
 

@@ -4,15 +4,19 @@ using UnityEngine.Tilemaps;
 
 public class GridManager : MonoBehaviour
 {
+    public static Vector3Int NO_CELL = new(int.MinValue, int.MinValue, int.MinValue);
+
     Grid grid;
     Tilemap tilemap;
-
-    public Grid Grid => grid;
-    public Tilemap Tilemap => tilemap;
 
     AStar aStar;
     List<GridObject> gridObjects = new();
     Selectable selectedObject = null;
+    Vector3Int hoveredCell = NO_CELL;
+
+    public Grid Grid => grid;
+    public Tilemap Tilemap => tilemap;
+    public Vector3Int HoveredCell => hoveredCell;
 
     void Awake()
     {
@@ -37,35 +41,50 @@ public class GridManager : MonoBehaviour
     #region Grid Operations
     public void HighlightCellAt(Vector3 worldPosition)
     {
-        Vector3Int cell = grid.WorldToCell(worldPosition);
+        hoveredCell = grid.WorldToCell(worldPosition);
 
         // Highlight the tile under the mouse cursor
-        tilemap.GetInstantiatedObject(cell)?.GetComponent<Highlightable>()?.Highlight();
+        if (TryGetFromTile<Highlightable>(hoveredCell, out var highlightableTile))
+        {
+            highlightableTile.Highlight();
+        }
 
         // Highlight object in the tile
-        GameObject obj = GetObjectAt(cell);
+        GameObject obj = GetObjectAt(hoveredCell);
         if (obj != null)
         {
-            obj.GetComponent<Highlightable>()?.Highlight();
+            if (obj.TryGetComponent<Highlightable>(out var highlightableObject))
+            {
+                highlightableObject.Highlight();
+            }
         }
     }
 
-    public void HighlightCellsWithinRange(Vector3 worldPosition, int range)
+    public void ShowCellsWithinRange(Vector3 worldPosition, int range)
     {
         Vector3Int centerCell = grid.WorldToCell(worldPosition);
         for (int x = -range; x <= range; x++)
         {
             for (int y = -range; y <= range; y++)
             {
-                Vector3Int cell = new Vector3Int(centerCell.x + x, centerCell.y + y, centerCell.z);
-                if (aStar.FindPath(centerCell, cell, range).Count > 0)
+                Vector3Int cell = new(centerCell.x + x, centerCell.y + y, centerCell.z);
+                if (FindPath(centerCell, cell, range).Count > 0)
                 {
-                    tilemap.GetInstantiatedObject(cell)?.GetComponent<Tile>()?.ShowOverlay();
+                    if (TryGetFromTile<Tile>(cell, out var tile))
+                    {
+                        // Show overlay on the tile
+                        tile.ShowOverlay();
+                    }
                 }
             }
         }
     }
-    
+
+    public void HideAllHighlights()
+    {
+        hoveredCell = NO_CELL; // Reset hovered cell
+    }
+
     public void HideAllOverlays()
     {
         foreach (var tile in tilemap.GetComponentsInChildren<Tile>())
@@ -86,6 +105,27 @@ public class GridManager : MonoBehaviour
 
         // Check if the tile has a specific property or tag to determine walkability
         return ((TileData)tilemap.GetTile(cell)).walkable;
+    }
+
+    public void ShowArrowAt(Vector3Int cell)
+    {
+        if (TryGetFromTile<Tile>(cell, out var tile))
+        {
+            tile.ShowArrow();
+        }
+    }
+
+    bool TryGetFromTile<T>(Vector3Int cell, out T component) where T : Component
+    {
+        component = null;
+        GameObject tileObject = tilemap.GetInstantiatedObject(cell);
+        if (tileObject != null)
+        {
+            component = tileObject.GetComponent<T>();
+            return true;
+        }
+
+        return false;
     }
     #endregion
 
@@ -143,4 +183,17 @@ public class GridManager : MonoBehaviour
         selectedObject = null;
     }
     #endregion
+
+    #region Pathfinding
+    public List<Vector3Int> FindPath(Vector3Int start, Vector3Int end, int maxDistance)
+    {
+        return aStar.FindPath(start, end, maxDistance);
+    }
+    
+    public List<Vector3Int> FindPath(Vector3 start, Vector3Int end, int maxDistance)
+    {
+        return aStar.FindPath(grid.WorldToCell(start), end, maxDistance);
+    }
+    #endregion
+
 }
