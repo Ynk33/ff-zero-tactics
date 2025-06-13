@@ -178,6 +178,8 @@ public class GridManager : MonoBehaviour
         // If an object is found at the cell, select it
         if (obj != null)
         {
+            Deselect();
+            
             Selectable selectable = obj.GetComponent<Selectable>();
             if (selectable != null)
             {
