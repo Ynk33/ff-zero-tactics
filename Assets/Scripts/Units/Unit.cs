@@ -1,8 +1,11 @@
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 
 public class Unit : MonoBehaviour
 {
+    public delegate void MoveCallback();
+
     [SerializeField]
     UnitDescription unitDescription;
 
@@ -30,6 +33,25 @@ public class Unit : MonoBehaviour
         if (isSelected)
         {
             ShowPath();
+        }
+    }
+
+    public void MoveTo(Vector3Int targetCell, MoveCallback callback)
+    {
+        List<Vector3Int> path = gridManager.FindPath(transform.position, targetCell, unitDescription.maxDistance);
+        if (path.Count > 0)
+        {
+            // Move the unit along the path
+            Sequence moveSequence = DOTween.Sequence();
+            foreach (Vector3Int cell in path)
+            {
+                Vector3 worldPosition = gridManager.GetCellWorldPosition(cell);
+                moveSequence.Append(transform.DOMove(worldPosition, 0.1f).SetEase(Ease.Linear));
+            }
+            moveSequence.OnComplete(() =>
+            {
+                callback.Invoke();
+            });
         }
     }
 

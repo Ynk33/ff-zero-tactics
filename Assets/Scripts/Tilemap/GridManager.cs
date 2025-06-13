@@ -6,6 +6,9 @@ public class GridManager : MonoBehaviour
 {
     public static Vector3Int NO_CELL = new(int.MinValue, int.MinValue, int.MinValue);
 
+    [SerializeField]
+    Vector3 tileSize = new(1f, 1f, 0f);
+
     Grid grid;
     Tilemap tilemap;
 
@@ -13,10 +16,12 @@ public class GridManager : MonoBehaviour
     List<GridObject> gridObjects = new();
     Selectable selectedObject = null;
     Vector3Int hoveredCell = NO_CELL;
+    bool isBusy = false;
 
     public Grid Grid => grid;
     public Tilemap Tilemap => tilemap;
     public Vector3Int HoveredCell => hoveredCell;
+    public bool IsBusy => isBusy;
 
     void Awake()
     {
@@ -95,6 +100,10 @@ public class GridManager : MonoBehaviour
     #endregion
 
     #region Tile Management
+    public Vector3 GetCellWorldPosition(Vector3Int cell)
+    {
+        return grid.CellToWorld(cell) + tileSize * 0.5f;
+    }
     public bool IsWalkable(Vector3Int cell)
     {
         TileBase tile = tilemap.GetTile(cell);
@@ -161,11 +170,12 @@ public class GridManager : MonoBehaviour
         return GetObjectAt(cell) != null;
     }
 
-    public void SelectObjectAt(Vector3 worldPosition)
+    public void SelectAt(Vector3 worldPosition)
     {
         Vector3Int cell = grid.WorldToCell(worldPosition);
 
         GameObject obj = GetObjectAt(cell);
+        // If an object is found at the cell, select it
         if (obj != null)
         {
             Selectable selectable = obj.GetComponent<Selectable>();
@@ -174,6 +184,25 @@ public class GridManager : MonoBehaviour
                 selectable.Select();
                 selectedObject = selectable;
             }
+        }
+        // If no object is found but an object is already selected, move it to the selected cell and deselect it
+        else if (selectedObject != null && selectedObject.TryGetComponent<GridObject>(out var gridObject))
+        {
+            if (gridObject.TryGetComponent<Unit>(out var unit))
+            {
+                isBusy = true;
+                unit.MoveTo(cell, () =>
+                {
+                    isBusy = false;
+                });
+            }
+
+            Deselect();
+        }
+        // If no object is found and no object is selected, deselect any currently selected object
+        else
+        {
+            Deselect();
         }
     }
 

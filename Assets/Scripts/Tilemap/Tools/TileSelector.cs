@@ -28,6 +28,12 @@ public class TileSelector : MonoBehaviour
 
     void LateUpdate()
     {
+        if (gridManager.IsBusy)
+        {
+            // If the grid manager is busy, skip the selection logic
+            return;
+        }
+
         Vector3 mouseWorldPosition = GetMouseWorldPosition();
         if (mouseWorldPosition == ERROR_CELL)
         {
@@ -40,8 +46,7 @@ public class TileSelector : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
-            gridManager.Deselect();
-            gridManager.SelectObjectAt(mouseWorldPosition);
+            gridManager.SelectAt(mouseWorldPosition);
         }
         else if (Input.GetMouseButtonDown(1))
         {
