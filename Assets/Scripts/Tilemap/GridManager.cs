@@ -15,6 +15,7 @@ public class GridManager : MonoBehaviour
     AStar aStar;
     List<GridObject> gridObjects = new();
     Selectable selectedObject = null;
+    Unit selectedUnit = null;
     Vector3Int hoveredCell = NO_CELL;
     bool isBusy = false;
 
@@ -100,10 +101,11 @@ public class GridManager : MonoBehaviour
     #endregion
 
     #region Tile Management
-    public Vector3 GetCellWorldPosition(Vector3Int cell)
+    public Vector3 GetCellCenterWorldPosition(Vector3Int cell)
     {
         return grid.CellToWorld(cell) + tileSize * 0.5f;
     }
+
     public bool IsWalkable(Vector3Int cell)
     {
         TileBase tile = tilemap.GetTile(cell);
@@ -183,8 +185,9 @@ public class GridManager : MonoBehaviour
             Selectable selectable = obj.GetComponent<Selectable>();
             if (selectable != null)
             {
-                selectable.Select();
                 selectedObject = selectable;
+                selectedUnit = selectedObject.GetComponent<Unit>();
+                selectedObject.Select();
             }
         }
         // If no object is found but an object is already selected, move it to the selected cell and deselect it
@@ -196,6 +199,7 @@ public class GridManager : MonoBehaviour
                 unit.MoveTo(cell, () =>
                 {
                     isBusy = false;
+                    selectedUnit = null;
                 });
             }
 
@@ -231,11 +235,7 @@ public class GridManager : MonoBehaviour
     
     public float Heuristic(Vector3Int a, Vector3Int b)
     {
-        // Increase cost if move is forward
-        float forwardCost = b.x - a.x;
-        if (forwardCost > 0) forwardCost *= 2;
-
-        return Mathf.Abs(forwardCost) + Mathf.Abs(a.y - b.y) + Mathf.Abs(a.z - b.z);
+        return selectedUnit.GetCost(a, b);
     }
     #endregion
 

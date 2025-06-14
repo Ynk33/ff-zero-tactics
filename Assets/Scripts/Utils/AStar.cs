@@ -76,7 +76,7 @@ public class AStar
         // No path found, return an empty path
         return path;
     }
-    
+
     List<Vector3Int> GetNeighbors(Vector3Int cell)
     {
         var neighbors = new List<Vector3Int>();

@@ -45,7 +45,7 @@ public class Unit : MonoBehaviour
             Sequence moveSequence = DOTween.Sequence();
             foreach (Vector3Int cell in path)
             {
-                Vector3 worldPosition = gridManager.GetCellWorldPosition(cell);
+                Vector3 worldPosition = gridManager.GetCellCenterWorldPosition(cell);
                 moveSequence.Append(transform.DOMove(worldPosition, 0.1f).SetEase(Ease.Linear));
             }
             moveSequence.OnComplete(() =>
@@ -57,6 +57,15 @@ public class Unit : MonoBehaviour
         {
             callback.Invoke(); // Call the callback even if no path is found
         }
+    }
+
+    public float GetCost(Vector3Int from, Vector3Int to)
+    {
+        // Increase cost if move is forward
+        float forwardCost = to.x - from.x;
+        if (forwardCost > 0) forwardCost *= 2;
+
+        return Mathf.Abs(forwardCost) + Mathf.Abs(from.y - to.y) + Mathf.Abs(from.z - to.z);
     }
 
     void ShowPath()
