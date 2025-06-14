@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
 using UnityEngine;
 
 public class AStar
 {
+    public delegate float HeuristicDelegate(Vector3Int a, Vector3Int b);
+
     static List<Vector3Int> DIRECTIONS = new List<Vector3Int> {
         Vector3Int.left,
         Vector3Int.right,
@@ -19,7 +20,7 @@ public class AStar
         this.gridManager = gridManager;
     }
 
-    public List<Vector3Int> FindPath(Vector3Int start, Vector3Int end, int maxDistance)
+    public List<Vector3Int> FindPath(Vector3Int start, Vector3Int end, int maxDistance, HeuristicDelegate heuristicFunction)
     {
         List<Vector3Int> path = new List<Vector3Int>();
         var openSet = new PriorityQueue<Vector3Int>();
@@ -29,7 +30,7 @@ public class AStar
 
         openSet.Enqueue(start, 0);
         gScore[start] = 0;
-        fScore[start] = gridManager.Heuristic(start, end);
+        fScore[start] = heuristicFunction(start, end);
 
         while (openSet.Count > 0)
         {
@@ -55,7 +56,7 @@ public class AStar
                 if (!gridManager.IsWalkable(neighbor) || gridManager.IsOccupied(neighbor))
                     continue;
 
-                float tentativeGScore = gScore[current] + gridManager.Heuristic(current, neighbor);
+                float tentativeGScore = gScore[current] + heuristicFunction(current, neighbor);
 
                 // If the tentative score exceeds the max distance, skip this neighbor because it is too far
                 if (tentativeGScore > maxDistance)
@@ -66,7 +67,7 @@ public class AStar
                 {
                     cameFrom[neighbor] = current;
                     gScore[neighbor] = tentativeGScore;
-                    fScore[neighbor] = tentativeGScore + gridManager.Heuristic(neighbor, end);
+                    fScore[neighbor] = tentativeGScore + heuristicFunction(neighbor, end);
                     if (!openSet.Elements.Any(x => x.Item1 == neighbor))
                         openSet.Enqueue(neighbor, fScore[neighbor]);
                 }

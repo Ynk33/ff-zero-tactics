@@ -2,62 +2,14 @@ using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 
-public class Unit : MonoBehaviour
+public class Unit : TileObject
 {
     public delegate void MoveCallback();
 
     [SerializeField]
-    UnitDescription unitDescription;
+    int maxDistance = 5;
 
-    GridManager gridManager;
-    
-    bool isSelected = false;
-
-    void Awake()
-    {
-        gridManager = FindFirstObjectByType<GridManager>();
-        if (gridManager == null)
-        {
-            Debug.LogError("GridManager not found in the scene. Please ensure a GridManager component is present.");
-        }
-
-        if (TryGetComponent<Selectable>(out var selectable))
-        {
-            selectable.onSelect.AddListener(OnSelected);
-            selectable.onDeselect.AddListener(OnDeselected);
-        }
-    }
-
-    void Update()
-    {
-        if (isSelected)
-        {
-            ShowPath();
-        }
-    }
-
-    public void MoveTo(Vector3Int targetCell, MoveCallback callback)
-    {
-        List<Vector3Int> path = gridManager.FindPath(transform.position, targetCell, unitDescription.maxDistance);
-        if (path.Count > 0)
-        {
-            // Move the unit along the path
-            Sequence moveSequence = DOTween.Sequence();
-            foreach (Vector3Int cell in path)
-            {
-                Vector3 worldPosition = gridManager.GetCellCenterWorldPosition(cell);
-                moveSequence.Append(transform.DOMove(worldPosition, 0.1f).SetEase(Ease.Linear));
-            }
-            moveSequence.OnComplete(() =>
-            {
-                callback.Invoke();
-            });
-        }
-        else
-        {
-            callback.Invoke(); // Call the callback even if no path is found
-        }
-    }
+    public int MaxDistance => maxDistance;
 
     public float GetCost(Vector3Int from, Vector3Int to)
     {
@@ -68,28 +20,32 @@ public class Unit : MonoBehaviour
         return Mathf.Abs(forwardCost) + Mathf.Abs(from.y - to.y) + Mathf.Abs(from.z - to.z);
     }
 
-    void ShowPath()
+    public List<Vector3Int> FindPathTo(Vector3 position)
     {
-        Vector3Int hoveredCell = gridManager.HoveredCell;
-        if (hoveredCell != GridManager.NO_CELL)
+        return GridManager.FindPath(transform.position, position, maxDistance, GetCost);
+    }
+
+    public void MoveTo(Vector3 position, float movementDuration, MoveCallback onMoveComplete)
+    {
+        List<Vector3Int> path = FindPathTo(position);
+        if (path.Count > 0)
         {
-            List<Vector3Int> path = gridManager.FindPath(transform.position, hoveredCell, unitDescription.maxDistance);
+            // Move the unit along the path
+            Sequence moveSequence = DOTween.Sequence();
             foreach (Vector3Int cell in path)
             {
-                gridManager.ShowArrowAt(cell);
+                Vector3 worldPosition = GridManager.GetCellCenterWorldPosition(cell);
+                moveSequence.Append(transform.DOMove(worldPosition, movementDuration).SetEase(Ease.Linear));
             }
+            moveSequence.OnComplete(() =>
+            {
+                UpdateTile();
+                onMoveComplete();
+            });
         }
-    }
-
-    void OnSelected()
-    {
-        isSelected = true;
-        gridManager.ShowCellsWithinRange(transform.position, unitDescription.maxDistance);
-    }
-
-    void OnDeselected()
-    {
-        isSelected = false;
-        gridManager.HideAllOverlays();
+        else
+        {
+            onMoveComplete();
+        }
     }
 }

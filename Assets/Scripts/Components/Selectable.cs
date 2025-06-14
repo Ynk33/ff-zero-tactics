@@ -1,21 +1,49 @@
+using MoreMountains.Feedbacks;
 using UnityEngine;
-using UnityEngine.Events;
 
 public class Selectable : MonoBehaviour
 {
-    public UnityEvent onSelect;
+    [SerializeField]
+    MMF_Player onHoverFeedback;
 
-    public UnityEvent onDeselect;
+    [SerializeField]
+    MMF_Player onSelectFeedback;
 
-    public void Select()
+    bool hovered = false;
+    bool selected = false;
+
+    public bool IsHovered => hovered;
+    public bool IsSelected => selected;
+
+    public void Hover(bool isHovered)
     {
-        // Implement selection logic here
-        onSelect?.Invoke();
+        if (isHovered == hovered) return; // No change in hover state
+
+        if (isHovered)
+        {
+            onHoverFeedback.PlayFeedbacks();
+        }
+        else
+        {
+            onHoverFeedback.StopFeedbacks();
+        }
+
+        hovered = isHovered;
     }
 
-    public void Deselect()
+    public void Select(bool isSelected)
     {
-        // Implement deselection logic here
-        onDeselect?.Invoke();
+        if (isSelected == selected) return; // No change in hover state
+
+        if (isSelected)
+        {
+            onSelectFeedback.PlayFeedbacks();
+        }
+        else
+        {
+            onSelectFeedback.StopFeedbacks();
+        }
+
+        selected = isSelected;
     }
 }

@@ -11,62 +11,51 @@ public class GridManager : MonoBehaviour
 
     Grid grid;
     Tilemap tilemap;
+    Dictionary<Vector3Int, Tile> tiles = new();
 
     AStar aStar;
-    List<GridObject> gridObjects = new();
-    Selectable selectedObject = null;
-    Unit selectedUnit = null;
-    Vector3Int hoveredCell = NO_CELL;
-    bool isBusy = false;
 
-    public Grid Grid => grid;
     public Tilemap Tilemap => tilemap;
-    public Vector3Int HoveredCell => hoveredCell;
-    public bool IsBusy => isBusy;
 
     void Awake()
     {
         grid = FindAnyObjectByType<Grid>();
-        tilemap = FindAnyObjectByType<Tilemap>();
-
-        aStar = new AStar(this);
-    }
-
-    void Start()
-    {
         if (grid == null)
         {
             Debug.LogError("Grid not found in the scene. Please ensure a Grid component is present.");
         }
+
+        tilemap = FindAnyObjectByType<Tilemap>();
         if (tilemap == null)
         {
             Debug.LogError("Tilemap not found in the scene. Please ensure a Tilemap component is present.");
         }
+
+        aStar = new AStar(this);
+        FetchTiles();
     }
 
-    #region Grid Operations
-    public void HighlightCellAt(Vector3 worldPosition)
+    public Tile GetTileAt(Vector3Int cell)
     {
-        hoveredCell = grid.WorldToCell(worldPosition);
-
-        // Highlight the tile under the mouse cursor
-        if (TryGetFromTile<Highlightable>(hoveredCell, out var highlightableTile))
+        if (tiles.TryGetValue(cell, out var tile))
         {
-            highlightableTile.Highlight();
+            return tile;
         }
-
-        // Highlight object in the tile
-        GameObject obj = GetObjectAt(hoveredCell);
-        if (obj != null)
-        {
-            if (obj.TryGetComponent<Highlightable>(out var highlightableObject))
-            {
-                highlightableObject.Highlight();
-            }
-        }
+        return null;
     }
 
-    public void ShowCellsWithinRange(Vector3 worldPosition, int range)
+    public Tile GetTileAt(Vector3 worldPosition)
+    {
+        Vector3Int cell = grid.WorldToCell(worldPosition);
+        return GetTileAt(cell);
+    }
+
+    public Vector3 GetCellCenterWorldPosition(Vector3Int cell)
+    {
+        return grid.CellToWorld(cell) + tileSize * 0.5f;
+    }
+
+    public void HighlightCellsWithinRange(Vector3 worldPosition, int range, AStar.HeuristicDelegate heuristicFunction)
     {
         Vector3Int centerCell = grid.WorldToCell(worldPosition);
         for (int x = -range; x <= range; x++)
@@ -74,36 +63,42 @@ public class GridManager : MonoBehaviour
             for (int y = -range; y <= range; y++)
             {
                 Vector3Int cell = new(centerCell.x + x, centerCell.y + y, centerCell.z);
-                if (FindPath(centerCell, cell, range).Count > 0)
+                if (FindPath(centerCell, cell, range, heuristicFunction).Count > 0)
                 {
                     if (TryGetFromTile<Tile>(cell, out var tile))
                     {
                         // Show overlay on the tile
-                        tile.ShowOverlay();
+                        tile.Highlight(true);
                     }
                 }
             }
         }
     }
 
-    public void HideAllHighlights()
+    public void RemoveHighlights()
     {
-        hoveredCell = NO_CELL; // Reset hovered cell
-    }
-
-    public void HideAllOverlays()
-    {
-        foreach (var tile in tilemap.GetComponentsInChildren<Tile>())
+        foreach (var tile in tiles.Values)
         {
-            tile.HideOverlay();
+            tile.Highlight(false);
         }
     }
-    #endregion
 
-    #region Tile Management
-    public Vector3 GetCellCenterWorldPosition(Vector3Int cell)
+    public void RemovePath()
     {
-        return grid.CellToWorld(cell) + tileSize * 0.5f;
+        foreach (var tile in tiles.Values)
+        {
+            tile.TogglePath(false);
+        }
+    }
+
+    public List<Vector3Int> FindPath(Vector3Int start, Vector3Int end, int maxDistance, AStar.HeuristicDelegate heuristicFunction)
+    {
+        return aStar.FindPath(start, end, maxDistance, heuristicFunction);
+    }
+
+    public List<Vector3Int> FindPath(Vector3 start, Vector3 end, int maxDistance, AStar.HeuristicDelegate heuristicFunction)
+    {
+        return aStar.FindPath(grid.WorldToCell(start), grid.WorldToCell(end), maxDistance, heuristicFunction);
     }
 
     public bool IsWalkable(Vector3Int cell)
@@ -111,18 +106,25 @@ public class GridManager : MonoBehaviour
         TileBase tile = tilemap.GetTile(cell);
         if (tile == null)
         {
-            return true; // No tile means it's walkable
+            return false;
         }
 
         // Check if the tile has a specific property or tag to determine walkability
         return ((TileData)tilemap.GetTile(cell)).walkable;
     }
 
-    public void ShowArrowAt(Vector3Int cell)
+    public bool IsOccupied(Vector3Int cell)
     {
-        if (TryGetFromTile<Tile>(cell, out var tile))
+        return GetTileAt(cell).TileObject != null;
+    }
+
+    void FetchTiles()
+    {
+        tiles.Clear();
+        foreach (var tile in tilemap.GetComponentsInChildren<Tile>())
         {
-            tile.ShowArrow();
+            Vector3Int cell = tilemap.WorldToCell(tile.transform.position);
+            tiles[cell] = tile;
         }
     }
 
@@ -138,105 +140,4 @@ public class GridManager : MonoBehaviour
 
         return false;
     }
-    #endregion
-
-    #region Object Management
-    public void AddObject(GridObject gridObject)
-    {
-        if (!gridObjects.Contains(gridObject))
-        {
-            gridObjects.Add(gridObject);
-        }
-        else
-        {
-            Debug.LogWarning("GridObject is already in the map: " + gridObject.name);
-        }
-    }
-
-    public GameObject GetObjectAt(Vector3Int cellPosition)
-    {
-        foreach (var gridObject in gridObjects)
-        {
-            Vector3Int objectCellPosition = grid.WorldToCell(gridObject.transform.position);
-            if (objectCellPosition == cellPosition)
-            {
-                return gridObject.gameObject;
-            }
-        }
-
-        return null;
-    }
-
-    public bool IsOccupied(Vector3Int cell)
-    {
-        return GetObjectAt(cell) != null;
-    }
-
-    public void SelectAt(Vector3 worldPosition)
-    {
-        Vector3Int cell = grid.WorldToCell(worldPosition);
-
-        GameObject obj = GetObjectAt(cell);
-        // If an object is found at the cell, select it
-        if (obj != null)
-        {
-            Deselect();
-
-            Selectable selectable = obj.GetComponent<Selectable>();
-            if (selectable != null)
-            {
-                selectedObject = selectable;
-                selectedUnit = selectedObject.GetComponent<Unit>();
-                selectedObject.Select();
-            }
-        }
-        // If no object is found but an object is already selected, move it to the selected cell and deselect it
-        else if (selectedObject != null && selectedObject.TryGetComponent<GridObject>(out var gridObject))
-        {
-            if (gridObject.TryGetComponent<Unit>(out var unit))
-            {
-                isBusy = true;
-                unit.MoveTo(cell, () =>
-                {
-                    isBusy = false;
-                    selectedUnit = null;
-                });
-            }
-
-            Deselect();
-        }
-        // If no object is found and no object is selected, deselect any currently selected object
-        else
-        {
-            Deselect();
-        }
-    }
-
-    public void Deselect()
-    {
-        if (selectedObject != null)
-        {
-            selectedObject.Deselect();
-        }
-        selectedObject = null;
-    }
-    #endregion
-
-    #region Pathfinding
-    public List<Vector3Int> FindPath(Vector3Int start, Vector3Int end, int maxDistance)
-    {
-        return aStar.FindPath(start, end, maxDistance);
-    }
-
-    public List<Vector3Int> FindPath(Vector3 start, Vector3Int end, int maxDistance)
-    {
-        return aStar.FindPath(grid.WorldToCell(start), end, maxDistance);
-    }
-    
-    public float Heuristic(Vector3Int a, Vector3Int b)
-    {
-        return selectedUnit.GetCost(a, b);
-    }
-    #endregion
-
 }
