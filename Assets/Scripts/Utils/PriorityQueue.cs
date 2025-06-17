@@ -52,4 +52,22 @@ public class PriorityQueue<T>
         T bestItem = elements[bestPriorityIndex].Item1;
         return bestItem;
     }
+
+    public void Remove(T item, double priorityValue)
+    {
+        int tupleIndex = -1;
+
+        for (int i = 0; i < elements.Count; i++)
+        {
+            if (elements[i].Item1.Equals(item) && elements[i].Item2 == priorityValue)
+            {
+                tupleIndex = i;
+            }
+        }
+
+        if (tupleIndex >= 0)
+        {
+            elements.RemoveAt(tupleIndex);
+        }
+    }
 }

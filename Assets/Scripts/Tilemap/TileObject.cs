@@ -6,6 +6,8 @@ public class TileObject : MonoBehaviour
     Tile tile;
     Selectable selectable;
 
+    public Vector3 Position => transform.position;
+
     protected GridManager GridManager => gridManager;
 
     protected virtual void Awake()
@@ -26,15 +28,35 @@ public class TileObject : MonoBehaviour
 
     public void Hover(bool isHovered)
     {
-        if (selectable != null) selectable.Hover(isHovered);
+        if (selectable == null)
+        {
+            return;
+        }
+
+        OnHover(isHovered);
     }
 
-    public virtual void Select(bool isSelected)
+    public void Select(bool isSelected)
     {
-        if (selectable != null) selectable.Select(isSelected);
+        if (selectable == null)
+        {
+            return;
+        }
+
+        OnSelect(isSelected);
     }
 
-    protected void UpdateTile()
+    protected virtual void OnHover(bool isHovered)
+    {
+        selectable.Hover(isHovered);
+    }
+
+    protected virtual void OnSelect(bool isSelected)
+    {
+        selectable.Select(isSelected);
+    }
+
+    protected virtual void UpdateTile()
     {
         // Unset the previous tile object reference
         if (tile != null)

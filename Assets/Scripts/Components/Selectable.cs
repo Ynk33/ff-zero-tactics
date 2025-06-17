@@ -1,49 +1,54 @@
 using MoreMountains.Feedbacks;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 public class Selectable : MonoBehaviour
 {
     [SerializeField]
-    MMF_Player onHoverFeedback;
+    bool isSelectable = true;
 
     [SerializeField]
+    MMF_Player onHoverFeedback;
+
+    [SerializeField, ShowIf("isSelectable")]
     MMF_Player onSelectFeedback;
 
     bool hovered = false;
     bool selected = false;
 
-    public bool IsHovered => hovered;
-    public bool IsSelected => selected;
-
     public void Hover(bool isHovered)
     {
-        if (isHovered == hovered) return; // No change in hover state
-
+        hovered = isHovered;
+        
         if (isHovered)
         {
-            onHoverFeedback.PlayFeedbacks();
+            if (!selected) onHoverFeedback.PlayFeedbacks(); // Don't play feedbacks if selected!
         }
         else
         {
-            onHoverFeedback.StopFeedbacks();
+            if (!selected) onHoverFeedback.RestoreInitialValues(); // Don't play feedbacks if selected!
         }
-
-        hovered = isHovered;
     }
 
     public void Select(bool isSelected)
     {
-        if (isSelected == selected) return; // No change in hover state
+        if (!isSelectable) return;
+
+        selected = isSelected;
 
         if (isSelected)
         {
             onSelectFeedback.PlayFeedbacks();
         }
+        else if (hovered)
+        {
+            // Keep the hovered feedbacks playing if hovered.
+            onHoverFeedback.PlayFeedbacks();
+        }
         else
         {
-            onSelectFeedback.StopFeedbacks();
+            // If not selected nor hovered, restore initial values.
+            onHoverFeedback.RestoreInitialValues();
         }
-
-        selected = isSelected;
     }
 }

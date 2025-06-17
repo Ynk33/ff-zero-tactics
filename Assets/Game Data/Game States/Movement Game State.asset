@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dfe473cd219178b4e9357720a270567b, type: 3}
+  m_Name: Movement Game State
+  m_EditorClassIdentifier: 
+  gridManager:
+    useConstant: 0
+    Constant: {fileID: 0}
+    Reference: {fileID: 11400000, guid: 8f84d78d4fb249c40901acb7be820703, type: 2}
+  isBlocking:
+    useConstant: 0
+    Constant: 0
+    Reference: {fileID: 11400000, guid: e7a67ef39aa99f34c940a96b6387d1be, type: 2}
+  movementDurationPerCell: 0.1

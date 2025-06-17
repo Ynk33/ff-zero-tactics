@@ -1,10 +1,14 @@
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 public class GridManager : MonoBehaviour
 {
     public static Vector3Int NO_CELL = new(int.MinValue, int.MinValue, int.MinValue);
+
+    [SerializeField]
+    GridManagerVariable gridManagerVariable = default;
 
     [SerializeField]
     Vector3 tileSize = new(1f, 1f, 0f);
@@ -19,6 +23,8 @@ public class GridManager : MonoBehaviour
 
     void Awake()
     {
+        gridManagerVariable.Value = this;
+
         grid = FindAnyObjectByType<Grid>();
         if (grid == null)
         {
@@ -32,7 +38,7 @@ public class GridManager : MonoBehaviour
         }
 
         aStar = new AStar(this);
-        FetchTiles();
+        FetchTiles();  
     }
 
     public Tile GetTileAt(Vector3Int cell)
@@ -72,6 +78,41 @@ public class GridManager : MonoBehaviour
                     }
                 }
             }
+        }
+    }
+
+    public List<Vector3Int> GetCellsWithinRange(Vector3 worldPosition, int range, AStar.HeuristicDelegate heuristicFunction)
+    {
+        List<Vector3Int> cellsWithinRange = new();
+
+        Vector3Int from = grid.WorldToCell(worldPosition);
+        for (int x = -range; x <= range; x++)
+        {
+            for (int y = -range; y <= range; y++)
+            {
+                Vector3Int to = new(from.x + x, from.y + y, from.z);
+
+                if (heuristicFunction(from, to) > range) continue; // Skip cells outside of range
+                
+                List<Vector3Int> path = FindPath(from, to, range, heuristicFunction);
+                foreach (Vector3Int c in path)
+                {
+                    if (!cellsWithinRange.Contains(c))
+                    {
+                        cellsWithinRange.Add(c);
+                    }
+                }
+            }
+        }
+
+        return cellsWithinRange;
+    }
+
+    public void HighlightCells(List<Vector3Int> cells)
+    {
+        foreach (Vector3Int cell in cells)
+        {
+            GetTileAt(cell).Highlight(true);
         }
     }
 

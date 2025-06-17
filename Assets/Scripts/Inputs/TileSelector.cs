@@ -1,26 +1,30 @@
+using GravityGoat.ScriptableObject.GameEvents;
 using GravityGoat.ScriptableObject.References;
 using UnityEngine;
 
 public class TileSelector : MonoBehaviour
 {
-    // A constant to represent an error cell position
-    static Vector3 ERROR_CELL = Vector3.one * 9999f;
+    [SerializeField]
+    BoolReference isBlocked = default;
 
     [SerializeField]
-    TileVariable hoveredTile;
+    TileGameEvent onTileHovered = default;
 
     [SerializeField]
-    TileVariable selectedTile;
+    TileGameEvent onTileClicked = default;
 
     [SerializeField]
-    BoolReference isBlocked;
+    GameEvent onDeselect = default;
 
     Camera mainCamera;
     GridManager gridManager;
     TileSelectorCursor cursor;
     Plane worldPlane = new(Vector3.up, Vector3.zero);
 
+    bool isActive = false;
     Vector3 mouseWorldPosition = Vector3.zero;
+
+    Tile currentHoveredTile = null;
 
     void Awake()
     {
@@ -48,56 +52,67 @@ public class TileSelector : MonoBehaviour
         // If the game is blocked, skip the selection logic
         if (isBlocked.Value)
         {
-            hoveredTile.Value = null;
-            selectedTile.Value = null;
-            cursor.Hide();
+            // Make sure to disable any selection and the cursor if becomes inactive
+            if (isActive)
+            {
+                onDeselect.Raise();
+                cursor.Hide();
+            }
+            isActive = false;
             return;
         }
-
-        // Update the mouse world position
-        UpdateMousePosition();
-        if (mouseWorldPosition == ERROR_CELL)
+        else
         {
+            isActive = true;
+        }
+
+        // Update the mouse world position and ensure it's pointing at the tilemap
+        if (!UpdateMousePosition() || !IsWithinBoundaries())
+        {
+            onTileHovered.Raise(null);
             cursor.Hide();
-            hoveredTile.Value = null;
             return;
         }
 
         // Update the hovered tile based on the mouse world position
         UpdateHoveredTile();
-        if (hoveredTile.Value == null)
+        // Hide the cursor if not hovering any tile
+        if (currentHoveredTile == null)
         {
             cursor.Hide();
             return;
         }
 
         // Update the cursor position based on the mouse world position
-        cursor.ShowAt(hoveredTile.Value.WorldPosition);
+        cursor.ShowAt(currentHoveredTile.WorldPosition);
 
         UpdateSelection();
     }
 
-    void UpdateMousePosition()
+    bool UpdateMousePosition()
     {
-        mouseWorldPosition = GetMouseWorldPosition();
-        if (mouseWorldPosition == ERROR_CELL)
+        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+        if (worldPlane.Raycast(ray, out float enter))
         {
-            return;
+            mouseWorldPosition = ray.GetPoint(enter);
+            return true;
         }
+
+        return false;
+    }
+
+    bool IsWithinBoundaries()
+    {
+        return gridManager.GetTileAt(mouseWorldPosition) != null;
     }
 
     void UpdateHoveredTile()
     {
-        if (hoveredTile.Value != null)
+        Tile hoveredTile = gridManager.GetTileAt(mouseWorldPosition);
+        if (hoveredTile != currentHoveredTile)
         {
-            hoveredTile.Value.Hover(false);
-        }
-
-        hoveredTile.Value = gridManager.GetTileAt(mouseWorldPosition);
-
-        if (hoveredTile.Value != null)
-        {
-            hoveredTile.Value.Hover(true);
+            currentHoveredTile = hoveredTile;
+            onTileHovered.Raise(currentHoveredTile);
         }
     }
 
@@ -105,38 +120,12 @@ public class TileSelector : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            if (selectedTile.Value == hoveredTile.Value) return; // Do nothing if the same tile is clicked again
-
-            // Deselect the previously selected tile if there is one
-            if (selectedTile.Value != null)
-            {
-                selectedTile.Value.Select(false);
-            }
-
-            // Select the new hovered tile
-            selectedTile.Value = hoveredTile.Value;
-            selectedTile.Value.Select(true);
+            onTileClicked.Raise(currentHoveredTile);
         }
+        // Deselect the currently selected tile on right-click
         else if (Input.GetMouseButtonDown(1))
         {
-            // Deselect the currently selected tile on right-click
-            if (selectedTile.Value != null)
-            {
-                selectedTile.Value.Select(false);
-            }
-
-            selectedTile.Value = null;
+            onDeselect.Raise();
         }
-    }
-
-    Vector3 GetMouseWorldPosition()
-    {
-        Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (worldPlane.Raycast(ray, out float enter))
-        {
-            return ray.GetPoint(enter);
-        }
-
-        return ERROR_CELL; // Return an error cell if no hit is detected
     }
 }
